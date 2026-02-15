@@ -1,0 +1,32 @@
+# ShuffleKeys default configuration.
+# Copy to ~/.config/shufflekeys/config.toml and customise.
+
+[obfuscation]
+# Obfuscation strength: 0.0 = passthrough, 1.0 = full.
+strength = 0.7
+
+# Maximum latency (ms) added to any single event.
+max_latency_ms = 25
+
+# Quantisation bucket sizes (ms) — destroys fine-grained fingerprint.
+dwell_bucket_ms = 15
+flight_bucket_ms = 20
+
+# Standard deviation of Gaussian noise added after quantisation (ms).
+noise_stddev_ms = 8
+
+[advanced]
+# Physiologically plausible timing bounds (ms).
+min_dwell_ms = 40
+max_dwell_ms = 200
+min_flight_ms = 20
+max_flight_ms = 400
+
+# Generate a fresh timing persona every time the daemon starts.
+new_persona_on_restart = true
+
+[system]
+# Linux: automatically detect the keyboard input device.
+auto_detect_keyboard = true
+# Uncomment to specify a device explicitly:
+# device = "/dev/input/event3"
