@@ -1,13 +1,14 @@
-# ShuffleKeys
+# ShuffleKeys — Developer Makefile
 # ============================================================================
 #
 # Core library (Rust):     src/          → binary "shufflekeys"
-# Desktop UI (Tauri):      src-tauri/    → Tauri app wrapping the library
+# Desktop app:             src-tauri/    → desktop app wrapping the library
 # Frontend (React/Vite):   src/*.tsx      → bundled into dist/
 #
 # Usage:
 #   make              — lint, test, build (debug)
-#   make release      — full release build (CLI + Tauri app)
+#   make app          — launch the desktop app (dev mode)
+#   make release      — full release build (CLI + desktop app)
 #   make check        — fast compile check without codegen
 #   make lint         — clippy + fmt check
 #   make test         — run all tests
@@ -15,8 +16,8 @@
 
 .PHONY: all check build release test lint clippy fmt fmt-check clean \
         install uninstall setup init-config \
-        tauri-dev tauri-build tauri-clean \
-        ui-install ui-dev ui-build ui-clean \
+        app app-build app-clean \
+        frontend-install frontend-dev frontend-build frontend-clean \
         run run-off run-status run-daemon \
         ci help
 
@@ -75,33 +76,33 @@ fmt-check:
 # ── Frontend (React / Vite / Tailwind) ──────────────────────────────────────
 
 ## Install frontend npm dependencies
-ui-install:
+frontend-install:
 	$(NPM) install
 
-## Start Vite dev server (frontend only, no Tauri)
-ui-dev: ui-install
+## Start frontend dev server only (no desktop app)
+frontend-dev: frontend-install
 	$(NPM) run dev
 
 ## Production build of the frontend (outputs to dist/)
-ui-build: ui-install
+frontend-build: frontend-install
 	$(NPM) run build
 
 ## Remove frontend build artifacts
-ui-clean:
+frontend-clean:
 	rm -rf dist node_modules
 
-# ── Tauri Desktop App ──────────────────────────────────────────────────────
+# ── Desktop App ───────────────────────────────────────────────────────────
 
-## Start Tauri in development mode (hot-reload frontend + Rust backend)
-tauri-dev: ui-install
+## Launch the desktop app in dev mode (hot-reload)
+app: frontend-install
 	$(TAURI) dev
 
-## Build Tauri app bundle for distribution
-tauri-build: ui-install
+## Build the desktop app for distribution
+app-build: frontend-install
 	$(TAURI) build
 
-## Remove Tauri build artifacts
-tauri-clean:
+## Remove desktop app build artifacts
+app-clean:
 	rm -rf src-tauri/target
 
 # ── Run (CLI) ──────────────────────────────────────────────────────────────
@@ -148,8 +149,8 @@ setup: release
 clean:
 	$(CARGO) clean
 
-## Remove everything (Rust + frontend + Tauri)
-clean-all: clean ui-clean tauri-clean
+## Remove everything (Rust + frontend + desktop app)
+clean-all: clean frontend-clean app-clean
 
 # ── CI (all checks a PR must pass) ─────────────────────────────────────────
 
@@ -165,7 +166,7 @@ help:
 	@echo ""
 	@echo "Usage: make <target>"
 	@echo ""
-	@echo "Core (Rust CLI):"
+	@echo "Core:"
 	@echo "  check          Fast compile check (no codegen)"
 	@echo "  build          Debug build"
 	@echo "  release        Optimised release build"
@@ -178,16 +179,15 @@ help:
 	@echo "  fmt            Auto-format Rust code"
 	@echo "  fmt-check      Check formatting (no changes)"
 	@echo ""
-	@echo "Frontend (React/Vite):"
-	@echo "  ui-install     Install npm dependencies"
-	@echo "  ui-dev         Start Vite dev server"
-	@echo "  ui-build       Production frontend build"
-	@echo "  ui-clean       Remove dist/ and node_modules/"
+	@echo "Desktop App:"
+	@echo "  app            Launch desktop app (dev mode, hot-reload)"
+	@echo "  app-build      Build desktop app for distribution"
+	@echo "  app-clean      Remove desktop app build artifacts"
 	@echo ""
-	@echo "Tauri Desktop App:"
-	@echo "  tauri-dev      Dev mode (hot-reload frontend + Rust)"
-	@echo "  tauri-build    Build distributable app bundle"
-	@echo "  tauri-clean    Remove src-tauri/target/"
+	@echo "Frontend only:"
+	@echo "  frontend-dev   Start frontend dev server (no desktop app)"
+	@echo "  frontend-build Production frontend build"
+	@echo "  frontend-clean Remove dist/ and node_modules/"
 	@echo ""
 	@echo "Run (CLI):"
 	@echo "  run            Run with obfuscation ON (sudo)"
@@ -203,6 +203,6 @@ help:
 	@echo ""
 	@echo "Housekeeping:"
 	@echo "  clean          Remove Rust build artifacts"
-	@echo "  clean-all      Remove all artifacts (Rust + frontend + Tauri)"
+	@echo "  clean-all      Remove all build artifacts"
 	@echo "  ci             Full CI pipeline (fmt + clippy + test + release)"
 	@echo "  help           Show this help"
