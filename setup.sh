@@ -205,7 +205,9 @@ EOF
         # Create launchd agent
         PLIST_DIR="$HOME/Library/LaunchAgents"
         PLIST_FILE="$PLIST_DIR/com.user.shufflekeys.plist"
+        LOG_DIR="$HOME/Library/Logs/shufflekeys"
         mkdir -p "$PLIST_DIR"
+        mkdir -p "$LOG_DIR"
         
         cat <<EOF > "$PLIST_FILE"
 <?xml version="1.0" encoding="UTF-8"?>
@@ -224,9 +226,9 @@ EOF
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/tmp/shufflekeys.out.log</string>
+    <string>$LOG_DIR/shufflekeys.out.log</string>
     <key>StandardErrorPath</key>
-    <string>/tmp/shufflekeys.err.log</string>
+    <string>$LOG_DIR/shufflekeys.err.log</string>
 </dict>
 </plist>
 EOF

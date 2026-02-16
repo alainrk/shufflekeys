@@ -5,11 +5,18 @@ use shufflekeys::cli::{Cli, Commands};
 use shufflekeys::engine::config::AppConfig;
 
 fn main() -> anyhow::Result<()> {
+    let cli = Cli::parse();
+
+    // Daemonise as early as possible if requested.
+    // SAFETY: No threads are spawned and no global locks are held at this point,
+    // making the fork() operation safe in the Rust environment.
+    if cli.daemon {
+        daemonise()?;
+    }
+
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
         .format_timestamp_millis()
         .init();
-
-    let cli = Cli::parse();
 
     // Handle sub-commands that don't need the event loop.
     match &cli.command {
@@ -60,11 +67,6 @@ fn main() -> anyhow::Result<()> {
 
     let enabled = !matches!(cli.command, Some(Commands::Off));
     let new_persona = matches!(cli.command, Some(Commands::NewPersona));
-
-    // Daemonise if requested.
-    if cli.daemon {
-        daemonise()?;
-    }
 
     // Print banner.
     log::info!("ShuffleKeys v{}", env!("CARGO_PKG_VERSION"));

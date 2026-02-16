@@ -63,7 +63,6 @@ pub struct ObfuscationEngine {
 impl ObfuscationEngine {
     pub fn new(obf: ObfuscationConfig, adv: AdvancedConfig) -> Self {
         let persona_seed: u64 = rand::thread_rng().gen();
-        log::info!("New persona seed: {persona_seed:#018x}");
         Self {
             obf,
             adv,
@@ -86,7 +85,6 @@ impl ObfuscationEngine {
         self.rng = StdRng::seed_from_u64(self.persona_seed);
         self.pending_keyup_times.clear();
         self.last_emit_us = 0;
-        log::info!("Persona regenerated: {:#018x}", self.persona_seed);
     }
 
     /// Process an incoming key event and return a `ScheduledEvent` with the
