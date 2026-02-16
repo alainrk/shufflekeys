@@ -2,12 +2,6 @@
 
 ShuffleKeys is a tool designed to protect your privacy by obfuscating your keystroke dynamics.
 
-<p align="center">
-  <img src="assets/demo.gif" alt="ShuffleKeys Demo" width="600px" />
-</p>
-
-## Screenshots
-
 <div align="center">
   <table>
     <tr>
@@ -24,6 +18,10 @@ ShuffleKeys is a tool designed to protect your privacy by obfuscating your keyst
 </div>
 
 ## How it works
+
+<p align="center">
+  <img src="assets/demo.gif" alt="ShuffleKeys Demo" width="600px" />
+</p>
 
 Every person has a unique typing pattern—the specific timing between key presses (flight time) and the duration each key is held down (dwell time). Websites and trackers use high-resolution JavaScript timers to capture these patterns, creating a biometric "fingerprint" that can identify you across different sites, even if you use a VPN or incognito mode.
 
