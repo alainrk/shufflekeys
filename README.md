@@ -1,6 +1,6 @@
 # ShuffleKeys
 
-ShuffleKeys is a tool designed to protect your privacy by obfuscating your keystroke dynamics.
+ShuffleKeys is a tool designed to protect your privacy by obfuscating your [keystroke dynamics](https://en.wikipedia.org/wiki/Keystroke_dynamics).
 
 <div align="center">
   <table>
