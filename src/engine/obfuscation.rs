@@ -11,6 +11,9 @@ use crate::platform::{KeyEvent, KeyEventType};
 
 /// An event together with the absolute (monotonic, µs) time at which it
 /// should be emitted.
+///
+/// Ordering is *reversed* by `emit_at_us` so that a `BinaryHeap` yields the
+/// earliest-due event first (min-heap behaviour).
 #[derive(Debug, Clone)]
 pub struct ScheduledEvent {
     pub event: KeyEvent,
@@ -44,23 +47,23 @@ impl Ord for ScheduledEvent {
 /// Core obfuscation logic: quantise, add Gaussian noise, clamp, per-session
 /// persona seed.
 pub struct ObfuscationEngine {
-    pub obf: ObfuscationConfig,
-    pub adv: AdvancedConfig,
+    obf: ObfuscationConfig,
+    adv: AdvancedConfig,
     /// Per-session persona seed — makes cross-session linking harder.
-    pub persona_seed: u64,
+    persona_seed: u64,
     rng: StdRng,
     /// Tracks scheduled keyup deadlines keyed by key code.
     pending_keyup_times: HashMap<u16, u64>,
     /// Timestamp (µs) of the last *emitted* event for flight-time calculation.
     last_emit_us: u64,
     /// Whether obfuscation is currently active.
-    pub enabled: bool,
+    enabled: bool,
 }
 
 impl ObfuscationEngine {
     pub fn new(obf: ObfuscationConfig, adv: AdvancedConfig) -> Self {
         let persona_seed: u64 = rand::thread_rng().gen();
-        log::info!("New persona seed: {:#018x}", persona_seed);
+        log::info!("New persona seed: {persona_seed:#018x}");
         Self {
             obf,
             adv,
@@ -70,6 +73,11 @@ impl ObfuscationEngine {
             last_emit_us: 0,
             enabled: true,
         }
+    }
+
+    /// Set whether obfuscation is active.
+    pub fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
     }
 
     /// Re-roll the persona seed (e.g. on user request or session restart).
@@ -83,7 +91,7 @@ impl ObfuscationEngine {
 
     /// Process an incoming key event and return a `ScheduledEvent` with the
     /// (possibly delayed) emit time.
-    pub fn process(&mut self, mut event: KeyEvent) -> ScheduledEvent {
+    pub fn process(&mut self, event: KeyEvent) -> ScheduledEvent {
         let now_us = event.timestamp_us;
 
         // Pass-through when disabled or for modifier keys.
@@ -97,12 +105,10 @@ impl ObfuscationEngine {
         let scheduled = match event.event_type {
             KeyEventType::Down => self.process_keydown(event, now_us),
             KeyEventType::Up => self.process_keyup(event, now_us),
-            KeyEventType::Repeat => {
-                ScheduledEvent {
-                    event,
-                    emit_at_us: now_us,
-                }
-            }
+            KeyEventType::Repeat => ScheduledEvent {
+                event,
+                emit_at_us: now_us,
+            },
         };
 
         // Update the event's internal timestamp to reflect its new scheduled time.
@@ -190,6 +196,7 @@ impl ObfuscationEngine {
     }
 
     /// Hybrid obfuscation: quantise → Gaussian noise → clamp.
+    #[allow(clippy::similar_names)] // original_ms / original_us is intentional
     fn obfuscate_timing(
         &mut self,
         original_us: u64,
@@ -203,9 +210,10 @@ impl ObfuscationEngine {
         let quantized = (original_ms / bucket_ms).round() * bucket_ms;
 
         // Step 2 — Add Gaussian noise (seeded per-persona).
-        let normal = Normal::new(0.0, self.obf.noise_stddev_ms)
-            .expect("invalid noise stddev");
-        let noise: f64 = normal.sample(&mut self.rng);
+        // Falls back to 0 noise if stddev is somehow invalid (validated at load time).
+        let noise: f64 = Normal::new(0.0, self.obf.noise_stddev_ms)
+            .map(|d| d.sample(&mut self.rng))
+            .unwrap_or(0.0);
         let noised = quantized + noise;
 
         // Step 3 — Clamp to physiologically plausible range.
@@ -221,7 +229,7 @@ impl ObfuscationEngine {
         // Base ~90 ms, with a persona-dependent per-key tweak of ±15 ms.
         let base_ms: f64 = 90.0;
         // Deterministic per-key offset derived from persona seed.
-        let hash = self.persona_seed.wrapping_mul(key_code as u64 + 1);
+        let hash = self.persona_seed.wrapping_mul(u64::from(key_code) + 1);
         let offset_ms = ((hash % 3000) as f64 / 100.0) - 15.0; // ±15 ms
         let dwell_ms = (base_ms + offset_ms).max(40.0);
         (dwell_ms * 1000.0) as u64
@@ -242,33 +250,28 @@ mod tests {
     #[test]
     fn passthrough_when_disabled() {
         let mut eng = make_engine();
-        eng.enabled = false;
+        eng.set_enabled(false);
         let ev = KeyEvent {
             key_code: 30,
             event_type: KeyEventType::Down,
             timestamp_us: 1_000_000,
         };
-        let out = eng.process(ev.clone());
+        let out = eng.process(ev);
         assert_eq!(out.emit_at_us, 1_000_000);
     }
 
     #[test]
     fn modifiers_not_delayed() {
         let mut eng = make_engine();
-        // Test both Linux and macOS codes to ensure the underlying is_modifier 
-        // works for whatever platform it's currently compiled for.
-        let linux_codes = vec![29, 42, 56, 125];
-        let macos_codes = vec![56, 55, 59, 58];
-        
-        let all_codes = if cfg!(target_os = "linux") {
-            linux_codes
+        let all_codes: &[u16] = if cfg!(target_os = "linux") {
+            &[29, 42, 56, 125]
         } else if cfg!(target_os = "macos") {
-            macos_codes
+            &[56, 55, 59, 58]
         } else {
-            vec![]
+            &[]
         };
 
-        for code in all_codes {
+        for &code in all_codes {
             let ev = KeyEvent {
                 key_code: code,
                 event_type: KeyEventType::Down,
@@ -285,9 +288,7 @@ mod tests {
         for _ in 0..500 {
             let val = eng.obfuscate_timing(
                 100_000, // 100 ms
-                15.0,
-                40.0,
-                200.0,
+                15.0, 40.0, 200.0,
             );
             let ms = val as f64 / 1000.0;
             assert!(ms >= 40.0, "below floor: {ms}");
@@ -327,17 +328,35 @@ mod tests {
     #[test]
     fn persona_regeneration_changes_output() {
         let mut eng = make_engine();
-        let ev = KeyEvent {
+        eng.obf.strength = 1.0;
+
+        // First keydown establishes last_emit_us; the second keydown will
+        // have flight-time obfuscation influenced by the persona seed.
+        let ev1 = KeyEvent {
             key_code: 30,
             event_type: KeyEventType::Down,
             timestamp_us: 1_000_000,
         };
-        let out1 = eng.process(ev.clone());
+        let ev2 = KeyEvent {
+            key_code: 31,
+            event_type: KeyEventType::Down,
+            timestamp_us: 1_050_000, // 50 ms later
+        };
 
+        let _ = eng.process(ev1);
+        let out_a = eng.process(ev2);
+
+        // Regenerate persona and replay the same sequence.
         eng.regenerate_persona();
-        let out2 = eng.process(ev);
+        eng.obf.strength = 1.0;
 
-        // Very unlikely to be identical after persona change.
-        let _ = (out1, out2);
+        let _ = eng.process(ev1);
+        let out_b = eng.process(ev2);
+
+        // Different persona seeds should produce different obfuscated timing.
+        assert_ne!(
+            out_a.emit_at_us, out_b.emit_at_us,
+            "persona regeneration should change timing output"
+        );
     }
 }

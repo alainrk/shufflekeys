@@ -15,7 +15,7 @@ use foreign_types::ForeignType;
 
 use super::{KeyEvent, KeyEventType, KeyboardInterceptor};
 
-/// macOS keyboard interceptor using CGEventTap.
+/// macOS keyboard interceptor using `CGEventTap`.
 pub struct MacosInterceptor {
     /// The event tap mach port.
     tap: Option<CFMachPort>,
@@ -56,12 +56,79 @@ extern "C" {
     fn CGEventSetTimestamp(event: core_graphics::sys::CGEventRef, timestamp: u64);
 }
 
-// Constants that might be missing or named differently in core-graphics crate.
 const K_CG_KEYBOARD_EVENT_KEYCODE: CGEventField = 9;
 const K_CG_KEYBOARD_EVENT_AUTOREPEAT: CGEventField = 8;
 const K_CG_EVENT_SOURCE_USER_DATA: CGEventField = 42;
 
-const SHUFFLEKEYS_MAGIC: i64 = 0x534b4559; // "SKEY"
+const SHUFFLEKEYS_MAGIC: i64 = 0x534b_4559; // "SKEY"
+
+// ── Callback functions (must be at module level for extern "C") ──────────────
+
+/// `CGEventTap` callback — intercepts keyboard events and forwards them to the
+/// worker thread via the channel stored in `TapContext`.
+///
+/// # Safety
+///
+/// `user_info` must point to a valid `TapContext` for the lifetime of the tap.
+#[allow(clippy::similar_names)] // timestamp_ns / timestamp_us is intentional
+unsafe extern "C" fn raw_callback(
+    _proxy: CGEventTapProxy,
+    etype: CGEventType,
+    event: core_graphics::sys::CGEventRef,
+    user_info: *mut c_void,
+) -> core_graphics::sys::CGEventRef {
+    let context = &mut *user_info.cast::<TapContext>();
+    let event_obj = std::mem::ManuallyDrop::new(CGEvent::from_ptr(event));
+
+    // Recursion prevention: if this is an event we posted, let it through
+    // without intercepting it again.
+    if event_obj.get_integer_value_field(K_CG_EVENT_SOURCE_USER_DATA) == SHUFFLEKEYS_MAGIC {
+        return event;
+    }
+
+    let is_repeat = event_obj.get_integer_value_field(K_CG_KEYBOARD_EVENT_AUTOREPEAT) != 0;
+
+    let event_type = match etype {
+        CGEventType::KeyDown => {
+            if is_repeat {
+                KeyEventType::Repeat
+            } else {
+                KeyEventType::Down
+            }
+        }
+        CGEventType::KeyUp => KeyEventType::Up,
+        _ => return event,
+    };
+
+    let key_code = event_obj.get_integer_value_field(K_CG_KEYBOARD_EVENT_KEYCODE) as u16;
+
+    let timestamp_ns = CGEventGetTimestamp(event);
+    let timestamp_us = timestamp_ns / 1000;
+
+    let key_event = KeyEvent {
+        key_code,
+        event_type,
+        timestamp_us,
+    };
+
+    if context.tx.send(key_event).is_err() {
+        return event;
+    }
+
+    ptr::null_mut()
+}
+
+/// Periodic timer callback that checks the shutdown flag and stops the run loop.
+extern "C" fn timer_callback(
+    _timer: core_foundation::runloop::CFRunLoopTimerRef,
+    _info: *mut std::os::raw::c_void,
+) {
+    if !crate::is_running() {
+        CFRunLoop::get_current().stop();
+    }
+}
+
+// ── Implementation ──────────────────────────────────────────────────────────
 
 impl MacosInterceptor {
     pub fn new() -> Result<Self> {
@@ -73,7 +140,7 @@ impl MacosInterceptor {
     }
 }
 
-/// macOS modifier keys (CGKeyCodes).
+/// macOS modifier keys (`CGKeyCodes`).
 pub fn is_modifier(key_code: u16) -> bool {
     // 54: R Command, 55: L Command
     // 56: L Shift, 60: R Shift
@@ -103,56 +170,11 @@ impl KeyboardInterceptor for MacosInterceptor {
             }
         });
 
-        // 2. Define the tap callback.
-        unsafe extern "C" fn raw_callback(
-            _proxy: CGEventTapProxy,
-            etype: CGEventType,
-            event: core_graphics::sys::CGEventRef,
-            user_info: *mut c_void,
-        ) -> core_graphics::sys::CGEventRef {
-            let context = &mut *(user_info as *mut TapContext);
-            let event_obj = std::mem::ManuallyDrop::new(CGEvent::from_ptr(event));
-
-            // Recursion prevention: if this is an event we posted, let it through 
-            // without intercepting it again.
-            if event_obj.get_integer_value_field(K_CG_EVENT_SOURCE_USER_DATA) == SHUFFLEKEYS_MAGIC {
-                return event;
-            }
-
-            let is_repeat = event_obj.get_integer_value_field(K_CG_KEYBOARD_EVENT_AUTOREPEAT) != 0;
-
-            let event_type = match etype {
-                CGEventType::KeyDown => {
-                    if is_repeat {
-                        KeyEventType::Repeat
-                    } else {
-                        KeyEventType::Down
-                    }
-                }
-                CGEventType::KeyUp => KeyEventType::Up,
-                _ => return event,
-            };
-
-            let key_code =
-                event_obj.get_integer_value_field(K_CG_KEYBOARD_EVENT_KEYCODE) as u16;
-
-            let timestamp_ns = CGEventGetTimestamp(event);
-            let timestamp_us = timestamp_ns / 1000;
-
-            let key_event = KeyEvent {
-                key_code,
-                event_type,
-                timestamp_us,
-            };
-
-            if let Err(_) = context.tx.send(key_event) {
-                return event;
-            }
-
-            ptr::null_mut()
-        }
-
         let mask = (1u64 << CGEventType::KeyDown as u64) | (1u64 << CGEventType::KeyUp as u64);
+
+        // SAFETY: CGEventTapCreate is a CoreGraphics FFI call. The tap_context
+        // pointer remains valid for the lifetime of the run loop (we block below).
+        // raw_callback matches the expected CGEventTapCallback signature.
         let tap_port_ref = unsafe {
             CGEventTapCreate(
                 CGEventTapLocation::HID,
@@ -160,34 +182,33 @@ impl KeyboardInterceptor for MacosInterceptor {
                 CGEventTapOptions::Default,
                 mask,
                 raw_callback,
-                &mut tap_context as *mut TapContext as *mut c_void,
+                (&raw mut tap_context).cast::<c_void>(),
             )
         };
 
         if tap_port_ref.is_null() {
-            bail!("Failed to create CGEventTap. Do you have 'Input Monitoring' / 'Accessibility' permissions?");
+            bail!(
+                "Failed to create CGEventTap. \
+                 Do you have 'Input Monitoring' / 'Accessibility' permissions?"
+            );
         }
 
+        // SAFETY: tap_port_ref was just created and is non-null.
         let tap = unsafe { CFMachPort::wrap_under_create_rule(tap_port_ref) };
 
-        // 4. Add to run loop.
-        let source = tap.create_runloop_source(0).map_err(|_| anyhow::anyhow!("Failed to create runloop source"))?;
+        let source = tap
+            .create_runloop_source(0)
+            .map_err(|()| anyhow::anyhow!("Failed to create runloop source"))?;
         let run_loop = CFRunLoop::get_current();
+        // SAFETY: source is a valid CFRunLoopSource from the tap we just created.
         unsafe {
             run_loop.add_source(&source, kCFRunLoopCommonModes);
         }
 
-        // 5. Add a timer to check for shutdown and stop the run loop.
+        // Add a timer to check for shutdown and stop the run loop.
         // This ensures Ctrl+C works even if no keys are being pressed.
-        extern "C" fn timer_callback(
-            _timer: core_foundation::runloop::CFRunLoopTimerRef,
-            _info: *mut std::os::raw::c_void,
-        ) {
-            if !crate::is_running() {
-                CFRunLoop::get_current().stop();
-            }
-        }
-
+        // SAFETY: CFRunLoopTimerCreate with valid parameters; timer_callback is
+        // a valid extern "C" function.
         let timer = unsafe {
             let timer_ref = core_foundation::runloop::CFRunLoopTimerCreate(
                 core_foundation::base::kCFAllocatorDefault,
@@ -200,6 +221,7 @@ impl KeyboardInterceptor for MacosInterceptor {
             );
             core_foundation::runloop::CFRunLoopTimer::wrap_under_create_rule(timer_ref)
         };
+        // SAFETY: timer is a valid CFRunLoopTimer.
         unsafe {
             run_loop.add_timer(&timer, kCFRunLoopCommonModes);
         }
@@ -209,10 +231,10 @@ impl KeyboardInterceptor for MacosInterceptor {
 
         log::info!("macOS event tap active. Press Ctrl+C to stop.");
 
-        // This blocks.
+        // This blocks until the run loop is stopped.
         CFRunLoop::run_current();
 
-        let _ = worker_handle; 
+        let _ = worker_handle;
 
         Ok(())
     }
@@ -225,6 +247,7 @@ impl KeyboardInterceptor for MacosInterceptor {
         log::info!("Stopping macOS interceptor");
         if let Some(source) = self.source.take() {
             let run_loop = CFRunLoop::get_current();
+            // SAFETY: removing the source we previously added.
             unsafe {
                 run_loop.remove_source(&source, kCFRunLoopCommonModes);
             }
@@ -241,14 +264,14 @@ impl MacosInterceptor {
         let source = core_graphics::event_source::CGEventSource::new(
             core_graphics::event_source::CGEventSourceStateID::HIDSystemState,
         )
-        .map_err(|_| anyhow::anyhow!("Failed source"))?;
+        .map_err(|()| anyhow::anyhow!("Failed to create event source"))?;
 
-        let mut cg_event = CGEvent::new_keyboard_event(
+        let cg_event = CGEvent::new_keyboard_event(
             source,
             event.key_code as CGKeyCode,
             matches!(event.event_type, KeyEventType::Down | KeyEventType::Repeat),
         )
-        .map_err(|_| anyhow::anyhow!("Failed event"))?;
+        .map_err(|()| anyhow::anyhow!("Failed to create keyboard event"))?;
 
         if event.event_type == KeyEventType::Repeat {
             cg_event.set_integer_value_field(K_CG_KEYBOARD_EVENT_AUTOREPEAT, 1);
@@ -256,6 +279,7 @@ impl MacosInterceptor {
 
         cg_event.set_integer_value_field(K_CG_EVENT_SOURCE_USER_DATA, SHUFFLEKEYS_MAGIC);
 
+        // SAFETY: cg_event.as_ptr() is a valid CGEventRef we just created.
         unsafe {
             CGEventSetTimestamp(cg_event.as_ptr(), event.timestamp_us * 1000);
         }

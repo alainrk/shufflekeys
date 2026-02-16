@@ -15,9 +15,9 @@ pub enum KeyEventType {
 }
 
 /// A single keyboard event.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct KeyEvent {
-    /// Linux: `input_event.code`; macOS: CGKeyCode.
+    /// Linux: `input_event.code`; macOS: `CGKeyCode`.
     pub key_code: u16,
     pub event_type: KeyEventType,
     /// Original event timestamp in µs (monotonic, platform-specific epoch).
@@ -35,7 +35,7 @@ pub trait KeyboardInterceptor {
     /// `callback` receives each raw event and returns:
     /// - `Some(event)` → emit the (possibly modified) event immediately,
     /// - `None`        → event has been queued by the engine; the caller
-    ///                    will emit it later via `emit_event`.
+    ///   will emit it later via `emit_event`.
     fn run(
         &mut self,
         callback: Box<dyn FnMut(KeyEvent) -> Option<KeyEvent> + Send>,

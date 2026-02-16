@@ -38,7 +38,7 @@ impl EventScheduler {
         !self.queue.is_empty()
     }
 
-    /// Try to pop the next event that is due (emit_at_us ≤ now).
+    /// Try to pop the next event that is due (`emit_at_us` ≤ now).
     /// Returns `None` if the queue is empty or the next event isn't due yet.
     pub fn try_pop(&mut self) -> Option<KeyEvent> {
         let now = self.now_us();

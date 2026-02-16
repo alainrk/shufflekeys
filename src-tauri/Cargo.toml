@@ -22,5 +22,3 @@ tauri-plugin-shell = "2.0"
 tauri-plugin-log = "2.0"
 tauri-plugin-process = "2.0"
 shufflekeys = { path = ".." }
-tokio = { version = "1", features = ["full"] }
-anyhow = "1"

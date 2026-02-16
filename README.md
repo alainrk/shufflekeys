@@ -3,7 +3,7 @@
 ShuffleKeys is a tool designed to protect your privacy by obfuscating your keystroke dynamics.
 
 <p align="center">
-  <img src="assets/demo.mp4" alt="ShuffleKeys Demo" width="600px" />
+  <img src="assets/demo.gif" alt="ShuffleKeys Demo" width="600px" />
 </p>
 
 ## How it works

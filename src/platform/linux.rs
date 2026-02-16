@@ -144,41 +144,37 @@ impl LinuxInterceptor {
             KeyEventType::Up => 0,
             KeyEventType::Repeat => 2,
         };
-                let ev = InputEvent::new(EventType::KEY, event.key_code, value);
-                virt.emit(&[ev])?;
-        
-                Ok(())
-            }
-        }
-        
-        /// Linux modifier keys (evdev codes).
-        pub fn is_modifier(key_code: u16) -> bool {
-            const MODIFIER_CODES: &[u16] = &[
-                29,  // KEY_LEFTCTRL
-                42,  // KEY_LEFTSHIFT
-                54,  // KEY_RIGHTSHIFT
-                56,  // KEY_LEFTALT
-                97,  // KEY_RIGHTCTRL
-                100, // KEY_RIGHTALT
-                125, // KEY_LEFTMETA
-                126, // KEY_RIGHTMETA
-            ];
-            MODIFIER_CODES.contains(&key_code)
-        }
-        
-        impl KeyboardInterceptor for LinuxInterceptor {
-        
-            fn run(
-        
-                &mut self,
-        
-                mut callback: Box<dyn FnMut(KeyEvent) -> Option<KeyEvent> + Send>,
-        
-            ) -> anyhow::Result<()> {
-        
-        
+        let ev = InputEvent::new(EventType::KEY, event.key_code, value);
+        virt.emit(&[ev])?;
+        Ok(())
+    }
+}
+
+/// Linux modifier keys (evdev codes).
+pub fn is_modifier(key_code: u16) -> bool {
+    const MODIFIER_CODES: &[u16] = &[
+        29,  // KEY_LEFTCTRL
+        42,  // KEY_LEFTSHIFT
+        54,  // KEY_RIGHTSHIFT
+        56,  // KEY_LEFTALT
+        97,  // KEY_RIGHTCTRL
+        100, // KEY_RIGHTALT
+        125, // KEY_LEFTMETA
+        126, // KEY_RIGHTMETA
+    ];
+    MODIFIER_CODES.contains(&key_code)
+}
+
+impl KeyboardInterceptor for LinuxInterceptor {
+    fn run(
+        &mut self,
+        mut callback: Box<dyn FnMut(KeyEvent) -> Option<KeyEvent> + Send>,
+    ) -> anyhow::Result<()> {
         let device = self.device.as_mut().context("Device not open")?;
-        let virt = self.virtual_device.as_mut().context("Virtual device not open")?;
+        let virt = self
+            .virtual_device
+            .as_mut()
+            .context("Virtual device not open")?;
 
         log::info!("Entering event loop on {}", self.device_path.display());
 

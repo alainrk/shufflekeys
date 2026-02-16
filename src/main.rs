@@ -3,14 +3,6 @@ use clap::Parser;
 
 use shufflekeys::cli::{Cli, Commands};
 use shufflekeys::engine::config::AppConfig;
-use shufflekeys::engine::obfuscation::ObfuscationEngine;
-use shufflekeys::engine::scheduler::EventScheduler;
-use shufflekeys::platform::{self, KeyEvent};
-
-/// Minimum delay for which we use thread::sleep. Below this, we only busy-wait.
-const MIN_SLEEP_THRESHOLD_US: u64 = 1500;
-/// Amount of time to subtract from sleep to ensure we don't oversleep.
-const SLEEP_OVERHEAD_US: u64 = 800;
 
 fn main() -> anyhow::Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
@@ -62,9 +54,12 @@ fn main() -> anyhow::Result<()> {
     if let Some(n) = cli.noise {
         cfg.obfuscation.noise_stddev_ms = n.max(0.0);
     }
+    if let Some(ref dev) = cli.device {
+        cfg.system.device = Some(dev.clone());
+    }
 
-    // Determine enabled state.
     let enabled = !matches!(cli.command, Some(Commands::Off));
+    let new_persona = matches!(cli.command, Some(Commands::NewPersona));
 
     // Daemonise if requested.
     if cli.daemon {
@@ -83,66 +78,12 @@ fn main() -> anyhow::Result<()> {
         cfg.obfuscation.noise_stddev_ms,
     );
 
-    // Build the obfuscation engine.
-    let mut engine =
-        ObfuscationEngine::new(cfg.obfuscation.clone(), cfg.advanced.clone());
-    engine.enabled = enabled;
-
-    if matches!(cli.command, Some(Commands::NewPersona)) {
-        engine.regenerate_persona();
-    }
-
-    // Build scheduler.
-    let scheduler = EventScheduler::new();
-
     // Set up signal handling for clean shutdown.
     install_signal_handlers();
 
-    // Create the platform interceptor.
-    let device_path = cli.device.as_deref().or(cfg.system.device.as_deref());
-    let mut interceptor =
-        platform::create_interceptor(device_path, cfg.system.auto_detect_keyboard)?;
+    // Run the engine (blocks until shutdown).
+    shufflekeys::run_engine(cfg, enabled, new_persona)?;
 
-    // Run the event loop.
-    //
-    // The interceptor's `run` method blocks reading from the grabbed
-    // keyboard.  For each key event it calls our callback.  Inside the
-    // callback we feed the event through the obfuscation engine and decide
-    // whether to emit immediately or defer.
-    //
-    // Because the callback can't call back into the interceptor (borrow
-    // rules), we collect deferred events and the `run` implementation
-    // handles emitting events returned by the callback.  For truly
-    // deferred events (non-zero delay), we use a simpler model: apply the
-    // delay inline via a short busy-wait/sleep *before* returning the
-    // event from the callback.
-
-    interceptor.run(Box::new(move |raw_event: KeyEvent| {
-        if !shufflekeys::is_running() {
-            return Some(raw_event); // shutting down — pass through
-        }
-
-        let now_us = scheduler.now_us();
-        let scheduled = engine.process(raw_event.clone(), now_us);
-
-        // If the event should be emitted later, wait for it.
-        if scheduled.emit_at_us > now_us {
-            let wait_us = scheduled.emit_at_us - now_us;
-            if wait_us > MIN_SLEEP_THRESHOLD_US {
-                // Sleep for most of the delay.
-                std::thread::sleep(std::time::Duration::from_micros(wait_us.saturating_sub(SLEEP_OVERHEAD_US)));
-            }
-            // Busy-wait for the final sub-ms.
-            while scheduler.now_us() < scheduled.emit_at_us {
-                std::hint::spin_loop();
-            }
-        }
-
-        Some(scheduled.event)
-    }))?;
-
-    // Clean up.
-    interceptor.stop()?;
     log::info!("ShuffleKeys stopped");
     Ok(())
 }
@@ -154,14 +95,16 @@ fn daemonise() -> anyhow::Result<()> {
     use std::process;
 
     log::info!("Daemonising…");
+    // SAFETY: No other threads are running at this point (pre-event-loop).
+    // fork() duplicates the process; the parent exits immediately and the
+    // child calls setsid to detach from the terminal.
     match unsafe { fork() } {
         Ok(ForkResult::Parent { child }) => {
-            println!("ShuffleKeys daemon started (pid {})", child);
+            println!("ShuffleKeys daemon started (pid {child})");
             process::exit(0);
         }
         Ok(ForkResult::Child) => {
             setsid().context("setsid failed")?;
-            // Redirect stdio to /dev/null.
             let devnull = std::fs::File::open("/dev/null")?;
             nix::unistd::dup2(devnull.as_raw_fd(), 0)?;
             nix::unistd::dup2(devnull.as_raw_fd(), 1)?;
@@ -172,12 +115,18 @@ fn daemonise() -> anyhow::Result<()> {
     }
 }
 
-// ── Signal handling ────────────────────────────────────────────────────────
-
 fn install_signal_handlers() {
+    // SAFETY: handle_signal only sets an AtomicBool which is async-signal-safe.
+    // Registered before any threads are spawned.
     unsafe {
-        libc::signal(libc::SIGINT, handle_signal as *const () as libc::sighandler_t);
-        libc::signal(libc::SIGTERM, handle_signal as *const () as libc::sighandler_t);
+        libc::signal(
+            libc::SIGINT,
+            handle_signal as *const () as libc::sighandler_t,
+        );
+        libc::signal(
+            libc::SIGTERM,
+            handle_signal as *const () as libc::sighandler_t,
+        );
     }
 }
 

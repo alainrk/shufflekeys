@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 
-/// ShuffleKeys — Keystroke dynamics obfuscation tool.
+/// `ShuffleKeys` — Keystroke dynamics obfuscation tool.
 ///
 /// Intercepts keyboard events at the OS level and injects controlled timing
 /// noise to make typing-based biometric fingerprinting unreliable.
@@ -11,7 +11,6 @@ pub struct Cli {
     pub command: Option<Commands>,
 
     // ── Global overrides (applied on top of config file) ───────────────
-
     /// Obfuscation strength (0.0 = passthrough, 1.0 = full).
     #[arg(long, value_name = "0.0-1.0")]
     pub strength: Option<f64>,

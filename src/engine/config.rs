@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 /// Full application configuration, loaded from TOML or CLI overrides.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AppConfig {
     #[serde(default)]
     pub obfuscation: ObfuscationConfig,
@@ -97,16 +97,6 @@ fn default_true() -> bool {
 
 // ── trait impls ─────────────────────────────────────────────────────────────
 
-impl Default for AppConfig {
-    fn default() -> Self {
-        Self {
-            obfuscation: ObfuscationConfig::default(),
-            advanced: AdvancedConfig::default(),
-            system: SystemConfig::default(),
-        }
-    }
-}
-
 impl Default for ObfuscationConfig {
     fn default() -> Self {
         Self {
@@ -151,20 +141,34 @@ impl AppConfig {
             .join("config.toml")
     }
 
+    /// Clamp all config values to valid ranges.
+    pub fn validate(&mut self) {
+        let obf = &mut self.obfuscation;
+        obf.strength = obf.strength.clamp(0.0, 1.0);
+        obf.max_latency_ms = obf.max_latency_ms.max(0.0);
+        obf.dwell_bucket_ms = obf.dwell_bucket_ms.max(1.0);
+        obf.flight_bucket_ms = obf.flight_bucket_ms.max(1.0);
+        obf.noise_stddev_ms = obf.noise_stddev_ms.max(0.0);
+
+        let adv = &mut self.advanced;
+        adv.min_dwell_ms = adv.min_dwell_ms.max(0.0);
+        adv.max_dwell_ms = adv.max_dwell_ms.max(adv.min_dwell_ms);
+        adv.min_flight_ms = adv.min_flight_ms.max(0.0);
+        adv.max_flight_ms = adv.max_flight_ms.max(adv.min_flight_ms);
+    }
+
     /// Load from disk, falling back to built-in defaults when the file
     /// doesn't exist.
     pub fn load() -> anyhow::Result<Self> {
         let path = Self::default_path();
         if path.exists() {
             let text = std::fs::read_to_string(&path)?;
-            let cfg: AppConfig = toml::from_str(&text)?;
+            let mut cfg: AppConfig = toml::from_str(&text)?;
+            cfg.validate();
             log::info!("Loaded config from {}", path.display());
             Ok(cfg)
         } else {
-            log::info!(
-                "No config file at {}; using defaults",
-                path.display()
-            );
+            log::info!("No config file at {}; using defaults", path.display());
             Ok(AppConfig::default())
         }
     }

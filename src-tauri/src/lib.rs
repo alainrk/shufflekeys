@@ -1,5 +1,7 @@
 use std::sync::Mutex;
-use tauri::{State, generate_handler, generate_context};
+
+use tauri::{generate_context, generate_handler, State};
+
 use shufflekeys::engine::config::AppConfig;
 
 struct AppState {
@@ -18,12 +20,18 @@ fn start_engine(state: State<AppState>) -> Result<String, String> {
     }
 
     shufflekeys::restart();
-    let mut handle = state.engine_handle.lock().unwrap();
-    
+    let mut handle = state
+        .engine_handle
+        .lock()
+        .map_err(|e| format!("Failed to acquire lock: {e}"))?;
+
     let join_handle = std::thread::spawn(|| {
-        let cfg = AppConfig::load().unwrap_or_default();
-        if let Err(e) = shufflekeys::run_engine(cfg) {
-            log::error!("Engine error: {}", e);
+        let cfg = AppConfig::load().unwrap_or_else(|e| {
+            log::error!("Failed to load config, using defaults: {e}");
+            AppConfig::default()
+        });
+        if let Err(e) = shufflekeys::run_engine(cfg, true, false) {
+            log::error!("Engine error: {e}");
         }
     });
 
