@@ -81,6 +81,9 @@ fn main() -> anyhow::Result<()> {
     // Set up signal handling for clean shutdown.
     install_signal_handlers();
 
+    // Arm the running flag before entering the event loop.
+    shufflekeys::restart();
+
     // Run the engine (blocks until shutdown).
     shufflekeys::run_engine(cfg, enabled, new_persona)?;
 

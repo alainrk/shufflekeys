@@ -21,7 +21,7 @@ const MIN_SLEEP_THRESHOLD_US: u64 = 1500;
 /// Overhead (µs) subtracted from sleep to avoid oversleeping past the target.
 const SLEEP_OVERHEAD_US: u64 = 800;
 
-static RUNNING: AtomicBool = AtomicBool::new(true);
+static RUNNING: AtomicBool = AtomicBool::new(false);
 
 /// Returns `true` if the engine should keep running.
 pub fn is_running() -> bool {
