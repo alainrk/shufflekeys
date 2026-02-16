@@ -2,25 +2,28 @@
 
 ShuffleKeys is a tool designed to protect your privacy by obfuscating your keystroke dynamics.
 
-## Screenshots
-
-<p align="center">
-  <img src="assets/screen_1.png" alt="Main Application View" width="400px" />
-  <br />
-  <em>The main dashboard where you can toggle protection.</em>
-</p>
-
-<p align="center">
-  <img src="assets/screen_2.png" alt="Settings View" width="400px" />
-  <br />
-  <em>The settings menu for fine-tuning obfuscation parameters.</em>
-</p>
-
-## How it works
-
 <p align="center">
   <img src="assets/demo.gif" alt="ShuffleKeys Demo" width="600px" />
 </p>
+
+## Screenshots
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <img src="assets/screen_1.png" alt="Main Application View" width="350px" /><br />
+        <em>Main Dashboard</em>
+      </td>
+      <td align="center">
+        <img src="assets/screen_2.png" alt="Settings View" width="350px" /><br />
+        <em>Configuration Settings</em>
+      </td>
+    </tr>
+  </table>
+</div>
+
+## How it works
 
 Every person has a unique typing pattern—the specific timing between key presses (flight time) and the duration each key is held down (dwell time). Websites and trackers use high-resolution JavaScript timers to capture these patterns, creating a biometric "fingerprint" that can identify you across different sites, even if you use a VPN or incognito mode.
 
@@ -41,20 +44,42 @@ git clone https://github.com/your-repo/shufflekeys.git
 cd shufflekeys
 
 # Run the setup script to build and configure permissions
-./setup.sh
+make setup
 ```
 
 ## Usage
 
-### Desktop UI
+### Desktop App
 
-The recommended way to use ShuffleKeys is through the graphical interface.
+The recommended way to use ShuffleKeys is through the desktop app:
 
 ```bash
-cargo tauri dev
+make app
 ```
 
 From the UI, you can toggle protection on and off and adjust the obfuscation strength.
+
+### CLI
+
+You can also run ShuffleKeys directly from the terminal:
+
+```bash
+make run            # Run with obfuscation ON (sudo)
+make run-off        # Run in passthrough mode (sudo)
+make run-status     # Show current config
+```
+
+### Developer Commands
+
+```bash
+make build          # Debug build
+make test           # Run all tests
+make lint           # Run clippy + format check
+make fmt            # Auto-format code
+make app-build      # Build desktop app for distribution
+make ci             # Full CI pipeline
+make help           # Show all available commands
+```
 
 ### Permissions
 
