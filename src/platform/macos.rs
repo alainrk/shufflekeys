@@ -15,6 +15,16 @@ use foreign_types::ForeignType;
 
 use super::{KeyEvent, KeyEventType, KeyboardInterceptor};
 
+#[link(name = "ApplicationServices", kind = "framework")]
+extern "C" {
+    fn AXIsProcessTrusted() -> bool;
+}
+
+/// Check if the application has Accessibility permissions.
+pub fn is_event_tap_enabled() -> bool {
+    unsafe { AXIsProcessTrusted() }
+}
+
 /// macOS keyboard interceptor using `CGEventTap`.
 pub struct MacosInterceptor {
     /// The event tap mach port.
@@ -188,8 +198,8 @@ impl KeyboardInterceptor for MacosInterceptor {
 
         if tap_port_ref.is_null() {
             bail!(
-                "Failed to create CGEventTap. \
-                 Do you have 'Input Monitoring' / 'Accessibility' permissions?"
+                "Failed to create CGEventTap. This usually means ShuffleKeys lacks 'Accessibility' permissions. \
+                 Please go to System Settings -> Privacy & Security -> Accessibility and ensure ShuffleKeys is enabled."
             );
         }
 

@@ -14,6 +14,7 @@ interface AppConfig {
 
 function App() {
   const [isRunning, setIsRunning] = useState(false);
+  const [hasPermissions, setHasPermissions] = useState(true);
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [view, setView] = useState<"status" | "config">("status");
   const [statusMsg, setStatusMsg] = useState("");
@@ -21,6 +22,9 @@ function App() {
   const checkStatus = async () => {
     const status = await invoke<boolean>("get_status");
     setIsRunning(status);
+    
+    const perms = await invoke<boolean>("check_permissions");
+    setHasPermissions(perms);
   };
 
   const loadConfig = async () => {
@@ -41,14 +45,18 @@ function App() {
 
   const toggleEngine = async () => {
     try {
+      setStatusMsg("");
       if (isRunning) {
         await invoke("stop_engine");
       } else {
-        await invoke("start_engine");
+        const result = await invoke<string>("start_engine");
+        console.log(result);
       }
-      checkStatus();
+      await checkStatus();
     } catch (e: any) {
+      console.error(e);
       setStatusMsg(e.toString());
+      setIsRunning(false);
     }
   };
 
@@ -102,7 +110,17 @@ function App() {
             <h2 className="text-2xl font-semibold mb-2">
               {isRunning ? 'Obfuscation Active' : 'System Paused'}
             </h2>
-            <p className="text-zinc-500 text-sm">
+            {!hasPermissions && (
+              <div className="mt-2 p-3 bg-red-500/10 border border-red-500/20 rounded-xl max-w-xs">
+                <p className="text-red-400 text-xs font-bold leading-tight">
+                  ACCESSIBILITY PERMISSIONS MISSING<br/>
+                  <span className="font-normal opacity-80 mt-1 block">
+                    Enable ShuffleKeys in System Settings -&gt; Privacy -&gt; Accessibility
+                  </span>
+                </p>
+              </div>
+            )}
+            <p className="text-zinc-500 text-sm mt-2">
               {isRunning ? 'Defeating biometric fingerprinting' : 'Protection is currently disabled'}
             </p>
           </div>

@@ -14,6 +14,11 @@ fn get_status() -> bool {
 }
 
 #[tauri::command]
+fn check_permissions() -> bool {
+    shufflekeys::platform::is_event_tap_enabled()
+}
+
+#[tauri::command]
 fn start_engine(state: State<AppState>) -> Result<String, String> {
     if shufflekeys::is_running() {
         return Ok("Already running".into());
@@ -25,15 +30,37 @@ fn start_engine(state: State<AppState>) -> Result<String, String> {
         .lock()
         .map_err(|e| format!("Failed to acquire lock: {e}"))?;
 
-    let join_handle = std::thread::spawn(|| {
+    // Use a channel to catch immediate startup errors (like permission issues)
+    let (tx, rx) = std::sync::mpsc::channel();
+
+    let join_handle = std::thread::spawn(move || {
         let cfg = AppConfig::load().unwrap_or_else(|e| {
             log::error!("Failed to load config, using defaults: {e}");
             AppConfig::default()
         });
-        if let Err(e) = shufflekeys::run_engine(cfg, true, false) {
-            log::error!("Engine error: {e}");
+        
+        // Try to start the engine. If it fails immediately, send the error back.
+        match shufflekeys::run_engine(cfg, true, false) {
+            Ok(_) => {
+                let _ = tx.send(Ok(()));
+            }
+            Err(e) => {
+                let _ = tx.send(Err(e.to_string()));
+            }
         }
     });
+
+    // Wait briefly for startup success/failure
+    match rx.recv_timeout(std::time::Duration::from_millis(500)) {
+        Ok(Err(e)) => {
+            shufflekeys::stop();
+            return Err(e);
+        }
+        Ok(Ok(())) => {}
+        Err(_) => {
+            // Timeout: assume it started or will fail later asynchronously
+        }
+    }
 
     *handle = Some(join_handle);
     Ok("Engine started".into())
@@ -66,6 +93,7 @@ pub fn run() {
         })
         .invoke_handler(generate_handler![
             get_status,
+            check_permissions,
             start_engine,
             stop_engine,
             get_config,

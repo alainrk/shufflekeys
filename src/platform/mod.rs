@@ -87,3 +87,12 @@ pub fn create_interceptor(
         anyhow::bail!("Unsupported platform");
     }
 }
+
+/// Check if the current process has the necessary permissions to intercept events.
+pub fn is_event_tap_enabled() -> bool {
+    #[cfg(target_os = "macos")]
+    return macos::is_event_tap_enabled();
+
+    #[cfg(not(target_os = "macos"))]
+    true
+}
