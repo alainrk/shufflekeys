@@ -27,6 +27,19 @@ Every person has a unique typing pattern—the specific timing between key press
 
 ShuffleKeys operates at the system level to neutralize this tracking. It intercepts your physical keystrokes, applies controlled timing noise and quantization (rounding the timing to discrete "buckets"), and then re-emits them as synthetic events with spoofed hardware timestamps. To a tracker, your unique typing rhythm is replaced by a consistent, randomized "persona" that cannot be linked back to you.
 
+## Tech Stack
+
+### Product
+- **Core Engine**: [Rust](https://www.rust-lang.org/) — High-performance, low-latency keystroke manipulation using `nix`, `libc`, and OS-specific APIs (`evdev` on Linux, `CoreGraphics` on macOS).
+- **Desktop Framework**: [Tauri v2](https://tauri.app/) — Lightweight desktop wrapper using native webviews for a minimal footprint.
+- **Frontend UI**: [React](https://reactjs.org/) + [TypeScript](https://www.typescriptlang.org/) — Modern, type-safe interface for real-time monitoring and configuration.
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) + [Lucide](https://lucide.dev/) — Sleek, utility-first design and iconography.
+
+### Toolchain
+- **Build System**: `Makefile` — Standardized entry points for CLI, UI, and maintenance tasks.
+- **Backend Tooling**: `Cargo` (Package Manager), `Clippy` (Linter), `rustfmt` (Formatter).
+- **Frontend Tooling**: `Vite` (Build Tool), `NPM` (Package Manager), `PostCSS` (CSS Transformation).
+
 ## Installation
 
 ### Prerequisites
