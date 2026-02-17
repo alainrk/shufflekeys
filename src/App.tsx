@@ -115,7 +115,8 @@ function App() {
                 <p className="text-red-400 text-xs font-bold leading-tight">
                   ACCESSIBILITY PERMISSIONS MISSING<br/>
                   <span className="font-normal opacity-80 mt-1 block">
-                    Enable ShuffleKeys in System Settings -&gt; Privacy -&gt; Accessibility
+                    Enable ShuffleKeys in System Settings -&gt; Privacy -&gt; Accessibility.
+                    If already enabled, toggle it off and back on (required after reinstall).
                   </span>
                 </p>
               </div>

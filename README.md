@@ -112,6 +112,8 @@ make help           # Show all available commands
 
 The application requires **Accessibility** (and potentially **Input Monitoring**) permissions. The setup script will guide you to the correct menu in System Settings.
 
+> **After reinstalling or updating**: macOS invalidates the existing accessibility grant when the binary changes. If the toggle is already on but ShuffleKeys reports missing permissions, toggle it **off and back on** (or remove the entry and re-add it) in System Settings -> Privacy & Security -> Accessibility.
+
 #### Linux
 
 The application requires access to `/dev/uinput`. The setup script will create the necessary udev rules and add your user to the `input` group. You must log out and back in for these changes to take effect.
