@@ -112,20 +112,19 @@ impl LinuxInterceptor {
 
         // Copy supported event types and keys.
         if let Some(keys) = physical.supported_keys() {
-            builder = builder.with_keys(&keys)?;
+            builder = builder.with_keys(keys)?;
         }
 
         let mut virt = builder.build()?;
         log::info!(
             "Created virtual keyboard: {}",
             virt.get_syspath()
-                .map(|p| p.display().to_string())
-                .unwrap_or_else(|_| "unknown".into())
+                .map_or_else(|_| "unknown".into(), |p| p.display().to_string())
         );
         Ok(virt)
     }
 
-    /// Emit a raw InputEvent through the virtual device.
+    /// Emit a raw `InputEvent` through the virtual device.
     fn emit_raw_event(
         virt: &mut evdev::uinput::VirtualDevice,
         ev: &InputEvent,
@@ -134,7 +133,7 @@ impl LinuxInterceptor {
         Ok(())
     }
 
-    /// Emit a KeyEvent through the virtual device.
+    /// Emit a `KeyEvent` through the virtual device.
     fn emit_key_event(
         virt: &mut evdev::uinput::VirtualDevice,
         event: &KeyEvent,
