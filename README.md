@@ -42,12 +42,6 @@ In this demo, the biometric registration fails to verify the user because the un
 
 ## Tech Stack
 
-- **Language:** [e.g., Rust / C++]
-- **OS Support:** [e.g., Linux (evdev), macOS (IOKit)]
-- **Performance:** Zero-latency perception for the user.
-
-## Tech Stack
-
 ### Product
 
 - **Core Engine**: [Rust](https://www.rust-lang.org/) — High-performance, low-latency keystroke manipulation using `nix`, `libc`, and OS-specific APIs (`evdev` on Linux, `CoreGraphics` on macOS).
