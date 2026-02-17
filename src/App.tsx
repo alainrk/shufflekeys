@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Shield, Settings, Power, X } from "lucide-react";
+import { Settings, Power, X } from "lucide-react";
 
 interface AppConfig {
   obfuscation: {
@@ -10,6 +10,17 @@ interface AppConfig {
     flight_bucket_ms: number;
     noise_stddev_ms: number;
   };
+}
+
+function Logo({ size = 24 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M256 430C256 430 400 360 400 250V120L256 60L112 120V250C112 360 256 430 256 430Z" 
+            stroke="currentColor" strokeWidth="40" strokeLinejoin="round"/>
+      <path d="M210 200C210 180 230 165 256 165C282 165 302 180 302 200C302 225 282 235 256 245C230 255 210 265 210 290C210 310 230 325 256 325C282 325 302 310 302 290" 
+            stroke="white" strokeWidth="40" strokeLinecap="round"/>
+    </svg>
+  );
 }
 
 function App() {
@@ -79,7 +90,7 @@ function App() {
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-2">
           <div className={`p-2 rounded-xl transition-colors duration-500 ${isRunning ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-            <Shield size={24} />
+            <Logo size={24} />
           </div>
           <h1 className="text-xl font-bold tracking-tight">ShuffleKeys</h1>
         </div>

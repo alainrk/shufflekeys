@@ -1,20 +1,14 @@
+<p align="center">
+  <img src="assets/logo.svg" alt="ShuffleKeys Logo" width="128px" />
+</p>
+
 # ShuffleKeys
 
 ShuffleKeys is a tool designed to protect your privacy by obfuscating your [keystroke dynamics](https://en.wikipedia.org/wiki/Keystroke_dynamics).
 
 <div align="center">
-  <table>
-    <tr>
-      <td align="center">
-        <img src="assets/screen_1.png" alt="Main Application View" width="350px" /><br />
-        <em>Main Dashboard</em>
-      </td>
-      <td align="center">
-        <img src="assets/screen_2.png" alt="Settings View" width="350px" /><br />
-        <em>Configuration Settings</em>
-      </td>
-    </tr>
-  </table>
+  <img src="assets/screen_1.png" alt="Main Dashboard" width="45%" />
+  <img src="assets/screen_2.png" alt="Configuration Settings" width="45%" />
 </div>
 
 ## How it works
