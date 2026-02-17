@@ -58,6 +58,20 @@ cd shufflekeys
 make setup
 ```
 
+### macOS — Gatekeeper notice
+
+ShuffleKeys is not signed with an Apple Developer certificate, so macOS will show a warning:
+
+> "ShuffleKeys" cannot be opened because Apple could not verify it is free of malware.
+
+To bypass this, remove the quarantine attribute after downloading:
+
+```bash
+xattr -cr /Applications/ShuffleKeys.app
+```
+
+Alternatively, right-click the app and select **Open** — macOS will give you the option to open it anyway.
+
 ## Usage
 
 ### Desktop App
