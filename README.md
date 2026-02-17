@@ -112,7 +112,7 @@ make help           # Show all available commands
 
 The application requires **Accessibility** (and potentially **Input Monitoring**) permissions. The setup script will guide you to the correct menu in System Settings.
 
-> **After reinstalling or updating**: macOS invalidates the existing accessibility grant when the binary changes. If the toggle is already on but ShuffleKeys reports missing permissions, toggle it **off and back on** (or remove the entry and re-add it) in System Settings -> Privacy & Security -> Accessibility.
+> **After reinstalling or updating**: macOS invalidates the existing accessibility grant when the binary changes. If the toggle is already on but ShuffleKeys reports missing permissions, remove the entry and re-add it in System Settings -> Privacy & Security -> Accessibility (select ShuffleKeys, click the **-** button, then re-open the app and add it back with **+**).
 
 #### Linux
 
