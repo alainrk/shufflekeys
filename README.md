@@ -1,25 +1,50 @@
-# ShuffleKeys
+# 🛡️ ShuffleKeys
+
+**Defeat biometric fingerprinting by obfuscating your [keystroke dynamics](https://en.wikipedia.org/wiki/Keystroke_dynamics).**
+
+[![Status: Active](https://img.shields.io/badge/Status-Active-success)](https://github.com/user/repo)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+
+---
+
+## The Problem
+
+Websites use high-resolution JavaScript timers to capture your unique typing pattern—the timing between key presses (**flight time**) and the duration each key is held down (**dwell time**). This creates a biometric "fingerprint" that identifies you across sites, even when using a VPN or Incognito mode.
+
+## The Solution
+
+ShuffleKeys operates at the system level to neutralize tracking by intercepting physical keystrokes and re-emitting them as synthetic events.
+
+### Core Mechanisms
+
+- **Quantization:** Rounds timing to discrete "buckets" to eliminate precise millisecond patterns.
+- **Controlled Noise:** Injects Gaussian noise ($\sigma$) into flight and dwell times.
+- **Timestamp Spoofing:** Replaces raw hardware timestamps with spoofed data to mislead trackers.
+
+---
+
+## Dashboard & Configuration
 
 <p align="center">
-  <img src="assets/logo.svg" alt="ShuffleKeys Logo" width="128px" />
+  <img src="assets/screen_1.png" alt="Main Dashboard" width="48%" />
+  <img src="assets/screen_2.png" alt="Configuration Settings" width="48%" />
 </p>
 
-ShuffleKeys is a tool designed to protect your privacy by obfuscating your [keystroke dynamics](https://en.wikipedia.org/wiki/Keystroke_dynamics).
+---
 
-## How it works
+## Demo: Neutralizing Enrollment
 
-Every person has a unique typing pattern—the specific timing between key presses (flight time) and the duration each key is held down (dwell time). Websites and trackers use high-resolution JavaScript timers to capture these patterns, creating a biometric "fingerprint" that can identify you across different sites, even if you use a VPN or incognito mode.
-
-ShuffleKeys operates at the system level to neutralize this tracking. It intercepts your physical keystrokes, applies controlled timing noise and quantization (rounding the timing to discrete "buckets"), and then re-emits them as synthetic events with spoofed hardware timestamps. To a tracker, your unique typing rhythm is replaced by a consistent, randomized "persona" that cannot be linked back to you.
-
-<div align="center">
-  <img src="assets/screen_1.png" alt="Main Dashboard" width="45%" />
-  <img src="assets/screen_2.png" alt="Configuration Settings" width="45%" />
-</div>
+In this demo, the biometric registration fails to verify the user because the underlying rhythm is replaced by a randomized "persona". [TypingDNA](https://www.typingdna.com/demo-sametext.html) provides a way to test it through their demo Authentication API.
 
 <p align="center">
   <img src="assets/demo.gif" alt="ShuffleKeys Demo" width="600px" />
 </p>
+
+## Tech Stack
+
+- **Language:** [e.g., Rust / C++]
+- **OS Support:** [e.g., Linux (evdev), macOS (IOKit)]
+- **Performance:** Zero-latency perception for the user.
 
 ## Tech Stack
 
