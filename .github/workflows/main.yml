@@ -3,6 +3,8 @@ name: Main Build & Release
 on:
   push:
     branches: [ main ]
+    tags:
+      - 'v*'
 
 jobs:
   build:
@@ -91,13 +93,23 @@ jobs:
           mkdir -p bin
           cp target/release/shufflekeys bin/shufflekeys-${{ matrix.platform }}
 
-      - name: Upload CLI Artifact
+      - name: Upload CLI to Release Assets
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
+        with:
+          files: bin/shufflekeys-${{ matrix.platform }}
+          tag_name: ${{ steps.tauri_build.outputs.tagName }}
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload CLI Artifact (Actions)
         uses: actions/upload-artifact@v4
         with:
           name: shufflekeys-cli-${{ matrix.platform }}
           path: bin/
 
-      - name: Upload Tauri Bundle Artifact
+      - name: Upload Tauri Bundle Artifact (Actions)
         uses: actions/upload-artifact@v4
         with:
           name: shufflekeys-app-${{ matrix.platform }}
