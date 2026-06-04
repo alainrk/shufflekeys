@@ -15,36 +15,36 @@ INSTALL_DIR="/usr/local/bin"
 CONFIG_DIR="$HOME/.config/shufflekeys"
 
 header() {
-    echo -e "
+  echo -e "
 ${BLUE}${BOLD}=== $1 ===${RESET}"
 }
 
 info() {
-    echo -e "${BOLD}INFO:${RESET} $1"
+  echo -e "${BOLD}INFO:${RESET} $1"
 }
 
 success() {
-    echo -e "${GREEN}${BOLD}SUCCESS:${RESET} $1"
+  echo -e "${GREEN}${BOLD}SUCCESS:${RESET} $1"
 }
 
 warn() {
-    echo -e "${YELLOW}${BOLD}WARNING:${RESET} $1"
+  echo -e "${YELLOW}${BOLD}WARNING:${RESET} $1"
 }
 
 error() {
-    echo -e "${RED}${BOLD}ERROR:${RESET} $1"
+  echo -e "${RED}${BOLD}ERROR:${RESET} $1"
 }
 
 ask_yes_no() {
-    while true; do
-        read -p "$1 [Y/n] " yn
-        case $yn in
-            [Yy]* ) return 0;;
-            [Nn]* ) return 1;;
-            "" ) return 0;;
-            * ) echo "Please answer yes or no.";;
-        esac
-    done
+  while true; do
+    read -p "$1 [Y/n] " yn
+    case $yn in
+    [Yy]*) return 0 ;;
+    [Nn]*) return 1 ;;
+    "") return 0 ;;
+    *) echo "Please answer yes or no." ;;
+    esac
+  done
 }
 
 # -----------------------------------------------------------------------------
@@ -69,10 +69,10 @@ echo ""
 # -----------------------------------------------------------------------------
 header "Checking Prerequisites"
 
-if ! command -v cargo &> /dev/null; then
-    error "Rust/Cargo is not installed or not in PATH."
-    echo "Please install Rust from https://rustup.rs/ and try again."
-    exit 1
+if ! command -v cargo &>/dev/null; then
+  error "Rust/Cargo is not installed or not in PATH."
+  echo "Please install Rust from https://rustup.rs/ and try again."
+  exit 1
 fi
 success "Cargo found."
 
@@ -83,10 +83,10 @@ header "Building Project"
 info "Compiling release binary... (this might take a minute)"
 
 if cargo build --release; then
-    success "Build complete."
+  success "Build complete."
 else
-    error "Build failed. Please check the error messages above."
-    exit 1
+  error "Build failed. Please check the error messages above."
+  exit 1
 fi
 
 # -----------------------------------------------------------------------------
@@ -97,16 +97,16 @@ header "Installation"
 TARGET_BIN="./target/release/$BIN_NAME"
 
 if ask_yes_no "Do you want to install '$BIN_NAME' to $INSTALL_DIR?"; then
-    info "Installing binary (requires sudo)..."
-    if sudo cp "$TARGET_BIN" "$INSTALL_DIR/$BIN_NAME"; then
-        success "Installed to $INSTALL_DIR/$BIN_NAME"
-    else
-        error "Failed to install binary."
-        exit 1
-    fi
+  info "Installing binary (requires sudo)..."
+  if sudo cp "$TARGET_BIN" "$INSTALL_DIR/$BIN_NAME"; then
+    success "Installed to $INSTALL_DIR/$BIN_NAME"
+  else
+    error "Failed to install binary."
+    exit 1
+  fi
 else
-    info "Skipping installation. You can run it from ./target/release/$BIN_NAME"
-    INSTALL_DIR=$(pwd)/target/release
+  info "Skipping installation. You can run it from ./target/release/$BIN_NAME"
+  INSTALL_DIR=$(pwd)/target/release
 fi
 
 # -----------------------------------------------------------------------------
@@ -115,13 +115,13 @@ fi
 header "Configuration"
 
 if [ ! -f "$CONFIG_DIR/config.toml" ]; then
-    if ask_yes_no "Initialize default configuration at $CONFIG_DIR?"; then
-        mkdir -p "$CONFIG_DIR"
-        "$INSTALL_DIR/$BIN_NAME" init-config
-        success "Configuration created."
-    fi
+  if ask_yes_no "Initialize default configuration at $CONFIG_DIR?"; then
+    mkdir -p "$CONFIG_DIR"
+    "$INSTALL_DIR/$BIN_NAME" init-config
+    success "Configuration created."
+  fi
 else
-    info "Configuration already exists at $CONFIG_DIR/config.toml"
+  info "Configuration already exists at $CONFIG_DIR/config.toml"
 fi
 
 # -----------------------------------------------------------------------------
@@ -131,40 +131,40 @@ OS="$(uname -s)"
 header "Platform Setup: $OS"
 
 if [ "$OS" == "Linux" ]; then
-    info "Linux setup: Checking permissions for /dev/uinput"
-    
-    # Check if uinput group exists (unlikely standard, usually 'input' group owns it)
-    # Common rule: KERNEL=="uinput", GROUP="input", MODE="0660"
-    
-    if ask_yes_no "Configure udev rules for passwordless usage (recommended)?"; then
-        RULE_FILE="/etc/udev/rules.d/99-shufflekeys.rules"
-        RULE_CONTENT='KERNEL=="uinput", GROUP="input", MODE="0660"'
-        
-        info "Creating $RULE_FILE..."
-        echo "$RULE_CONTENT" | sudo tee "$RULE_FILE" > /dev/null
-        
-        info "Adding user '$USER' to 'input' group..."
-        sudo usermod -aG input "$USER"
-        
-        info "Reloading udev rules..."
-        sudo udevadm control --reload-rules && sudo udevadm trigger
-        
-        success "Permissions configured."
-        warn "You may need to LOG OUT and LOG BACK IN for group changes to apply."
-    fi
-    
+  info "Linux setup: Checking permissions for /dev/uinput"
+
+  # Check if uinput group exists (unlikely standard, usually 'input' group owns it)
+  # Common rule: KERNEL=="uinput", GROUP="input", MODE="0660"
+
+  if ask_yes_no "Configure udev rules for passwordless usage (recommended)?"; then
+    RULE_FILE="/etc/udev/rules.d/99-shufflekeys.rules"
+    RULE_CONTENT='KERNEL=="uinput", GROUP="input", MODE="0660"'
+
+    info "Creating $RULE_FILE..."
+    echo "$RULE_CONTENT" | sudo tee "$RULE_FILE" >/dev/null
+
+    info "Adding user '$USER' to 'input' group..."
+    sudo usermod -aG input "$USER"
+
+    info "Reloading udev rules..."
+    sudo udevadm control --reload-rules && sudo udevadm trigger
+
+    success "Permissions configured."
+    warn "You may need to LOG OUT and LOG BACK IN for group changes to apply."
+  fi
+
 elif [ "$OS" == "Darwin" ]; then
-    info "macOS setup: Accessibility Permissions"
-    echo "ShuffleKeys requires 'Accessibility' (Input Monitoring) permissions to intercept keystrokes."
-    echo ""
-    echo "1. The app will try to run now to trigger the permission prompt."
-    echo "2. Open System Settings -> Privacy & Security -> Accessibility."
-    echo "3. Ensure your Terminal (or shufflekeys binary) is checked."
-    echo ""
-    
-    if ask_yes_no "Open System Settings now?"; then
-        open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-    fi
+  info "macOS setup: Accessibility Permissions"
+  echo "ShuffleKeys requires 'Accessibility' (Input Monitoring) permissions to intercept keystrokes."
+  echo ""
+  echo "1. The app will try to run now to trigger the permission prompt."
+  echo "2. Open System Settings -> Privacy & Security -> Accessibility."
+  echo "3. Ensure your Terminal (or shufflekeys binary) is checked."
+  echo ""
+
+  if ask_yes_no "Open System Settings now?"; then
+    open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+  fi
 fi
 
 # -----------------------------------------------------------------------------
@@ -173,13 +173,13 @@ fi
 header "Service Setup"
 
 if ask_yes_no "Do you want ShuffleKeys to start automatically at login?"; then
-    if [ "$OS" == "Linux" ]; then
-        # Create systemd user service
-        SERVICE_DIR="$HOME/.config/systemd/user"
-        SERVICE_FILE="$SERVICE_DIR/shufflekeys.service"
-        mkdir -p "$SERVICE_DIR"
-        
-        cat <<EOF > "$SERVICE_FILE"
+  if [ "$OS" == "Linux" ]; then
+    # Create systemd user service
+    SERVICE_DIR="$HOME/.config/systemd/user"
+    SERVICE_FILE="$SERVICE_DIR/shufflekeys.service"
+    mkdir -p "$SERVICE_DIR"
+
+    cat <<EOF >"$SERVICE_FILE"
 [Unit]
 Description=ShuffleKeys Keystroke Obfuscation
 After=network.target
@@ -192,24 +192,24 @@ RestartSec=3
 [Install]
 WantedBy=default.target
 EOF
-        info "Created $SERVICE_FILE"
-        systemctl --user daemon-reload
-        systemctl --user enable shufflekeys
-        success "Service enabled. It will start on next login."
-        if ask_yes_no "Start the service now?"; then
-             systemctl --user start shufflekeys
-             success "Service started."
-        fi
+    info "Created $SERVICE_FILE"
+    systemctl --user daemon-reload
+    systemctl --user enable shufflekeys
+    success "Service enabled. It will start on next login."
+    if ask_yes_no "Start the service now?"; then
+      systemctl --user start shufflekeys
+      success "Service started."
+    fi
 
-    elif [ "$OS" == "Darwin" ]; then
-        # Create launchd agent
-        PLIST_DIR="$HOME/Library/LaunchAgents"
-        PLIST_FILE="$PLIST_DIR/com.user.shufflekeys.plist"
-        LOG_DIR="$HOME/Library/Logs/shufflekeys"
-        mkdir -p "$PLIST_DIR"
-        mkdir -p "$LOG_DIR"
-        
-        cat <<EOF > "$PLIST_FILE"
+  elif [ "$OS" == "Darwin" ]; then
+    # Create launchd agent
+    PLIST_DIR="$HOME/Library/LaunchAgents"
+    PLIST_FILE="$PLIST_DIR/com.user.shufflekeys.plist"
+    LOG_DIR="$HOME/Library/Logs/shufflekeys"
+    mkdir -p "$PLIST_DIR"
+    mkdir -p "$LOG_DIR"
+
+    cat <<EOF >"$PLIST_FILE"
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -232,12 +232,12 @@ EOF
 </dict>
 </plist>
 EOF
-        info "Created $PLIST_FILE"
-        launchctl load "$PLIST_FILE" 2>/dev/null || true
-        success "Launch agent loaded."
-    fi
+    info "Created $PLIST_FILE"
+    launchctl load "$PLIST_FILE" 2>/dev/null || true
+    success "Launch agent loaded."
+  fi
 else
-    info "Skipping service setup."
+  info "Skipping service setup."
 fi
 
 # -----------------------------------------------------------------------------

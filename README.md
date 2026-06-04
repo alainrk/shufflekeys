@@ -44,14 +44,14 @@ In this demo, the biometric registration fails to verify the user because the un
 
 ### Product
 
-- **Core Engine**: [Rust](https://www.rust-lang.org/) — High-performance, low-latency keystroke manipulation using `nix`, `libc`, and OS-specific APIs (`evdev` on Linux, `CoreGraphics` on macOS).
-- **Desktop Framework**: [Tauri v2](https://tauri.app/) — Lightweight desktop wrapper using native webviews for a minimal footprint.
-- **Frontend UI**: [React](https://reactjs.org/) + [TypeScript](https://www.typescriptlang.org/) — Modern, type-safe interface for real-time monitoring and configuration.
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) + [Lucide](https://lucide.dev/) — Sleek, utility-first design and iconography.
+- **Core Engine**: [Rust](https://www.rust-lang.org/), High-performance, low-latency keystroke manipulation using `nix`, `libc`, and OS-specific APIs (`evdev` on Linux, `CoreGraphics` on macOS).
+- **Desktop Framework**: [Tauri v2](https://tauri.app/), Lightweight desktop wrapper using native webviews for a minimal footprint.
+- **Frontend UI**: [React](https://reactjs.org/) + [TypeScript](https://www.typescriptlang.org/), Modern, type-safe interface for real-time monitoring and configuration.
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) + [Lucide](https://lucide.dev/), Sleek, utility-first design and iconography.
 
 ### Toolchain
 
-- **Build System**: `Makefile` — Standardized entry points for CLI, UI, and maintenance tasks.
+- **Build System**: `Makefile`, Standardized entry points for CLI, UI, and maintenance tasks.
 - **Backend Tooling**: `Cargo` (Package Manager), `Clippy` (Linter), `rustfmt` (Formatter).
 - **Frontend Tooling**: `Vite` (Build Tool), `NPM` (Package Manager), `PostCSS` (CSS Transformation).
 
@@ -73,7 +73,7 @@ cd shufflekeys
 make setup
 ```
 
-### macOS — Gatekeeper notice
+### macOS, Gatekeeper notice
 
 ShuffleKeys is not signed with an Apple Developer certificate, so macOS will show a warning:
 
@@ -85,7 +85,7 @@ To bypass this, remove the quarantine attribute after downloading:
 xattr -cr /Applications/ShuffleKeys.app
 ```
 
-Alternatively, right-click the app and select **Open** — macOS will give you the option to open it anyway.
+Alternatively, right-click the app and select **Open**, macOS will give you the option to open it anyway.
 
 ## Usage
 
