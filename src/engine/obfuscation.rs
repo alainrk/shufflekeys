@@ -211,9 +211,8 @@ impl ObfuscationEngine {
 
         // Step 2 — Add Gaussian noise (seeded per-persona).
         // Falls back to 0 noise if stddev is somehow invalid (validated at load time).
-        let noise: f64 = Normal::new(0.0, self.obf.noise_stddev_ms)
-            .map(|d| d.sample(&mut self.rng))
-            .unwrap_or(0.0);
+        let noise: f64 =
+            Normal::new(0.0, self.obf.noise_stddev_ms).map_or(0.0, |d| d.sample(&mut self.rng));
         let noised = quantized + noise;
 
         // Step 3 — Clamp to physiologically plausible range.
